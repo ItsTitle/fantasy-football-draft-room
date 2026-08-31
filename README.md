@@ -13,9 +13,12 @@ always face the actual room.
 
 ## Run it
 
-You need **Node 20.19 or newer**, or **Node 22.12 or newer**, which is the floor
-Vite sets. Nothing else: neither data feed asks for an API key, there is no
-database, and there is no account to make.
+You need **Node 22.12 or newer**, or **Node 20.19 or newer** if you are still on
+the Node 20 line. That is the range Vite sets, and it has a hole in the middle:
+Node 21, and Node 22 before 22.12, will not run it.
+
+Nothing else. Neither data feed asks for an API key, there is no database, and
+there is no account to make.
 
 ```
 npm run install:all
