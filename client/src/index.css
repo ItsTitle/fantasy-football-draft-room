@@ -1,0 +1,1518 @@
+/*
+ * DRAFT ROOM
+ *
+ * The look comes from the object the app replaces: a felt draft board with a
+ * paper sticker for every pick. Felt is the ground, sticker paper is the type,
+ * and the palette is not decoration at all. Position colour is the densest
+ * signal in fantasy football and every real board carries it, so the six
+ * position hues ARE the palette. One warm gold is held back and spent on
+ * exactly one meaning: this is yours, or this is on the clock.
+ */
+
+:root {
+  /* Felt, under stadium light. Green-black rather than neutral black. */
+  --felt-0: #131c1b;
+  --felt-1: #192422;
+  --felt-2: #21312e;
+  --felt-3: #2a3e3a;
+  --line: #2c403c;
+  --line-soft: #223330;
+
+  /* Sticker paper. */
+  --chalk: #e9e7df;
+  --chalk-2: #9aaba7;
+  --chalk-3: #6b7c78;
+
+  /* Reserved. Yours, or on the clock. Nothing else. */
+  --gold: #f2c14e;
+  --gold-dim: #7a6229;
+
+  --qb: #e8615a;
+  --rb: #5ec4a0;
+  --wr: #5aa9e6;
+  --te: #e8a33d;
+  --k: #b48ce8;
+  --def: #8b9aa8;
+
+  --sans: 'Archivo', system-ui, sans-serif;
+  --narrow: 'Archivo Narrow', 'Archivo', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --r: 3px;
+  --pad: 12px;
+
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--felt-0);
+  color: var(--chalk);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Every number in this app sits in a column next to another number. */
+.num, td.num, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+h1, h2, h3 { margin: 0; font-weight: 600; }
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button { cursor: pointer; }
+
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: var(--r);
+}
+
+/* ---------------------------------------------------------------- primitives */
+
+.eyebrow {
+  font-family: var(--narrow);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+}
+
+.btn {
+  background: var(--felt-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  color: var(--chalk);
+  padding: 7px 14px;
+  font-family: var(--narrow);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: background 120ms, border-color 120ms;
+}
+.btn:hover:not(:disabled) { background: var(--felt-3); border-color: var(--chalk-3); }
+.btn:disabled { opacity: 0.38; cursor: not-allowed; }
+
+.btn.is-primary {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #17211f;
+}
+.btn.is-primary:hover:not(:disabled) { background: #ffd469; border-color: #ffd469; }
+
+.btn.is-quiet { background: transparent; }
+.btn.is-quiet:hover:not(:disabled) { background: var(--felt-2); }
+
+.field { display: flex; flex-direction: column; gap: 5px; }
+
+.field > label {
+  font-family: var(--narrow);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+}
+
+.input {
+  background: var(--felt-0);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 7px 9px;
+  width: 100%;
+}
+.input:focus { border-color: var(--chalk-3); outline: none; }
+
+select.input {
+  appearance: none;
+  padding-right: 28px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--chalk-3) 50%),
+    linear-gradient(135deg, var(--chalk-3) 50%, transparent 50%);
+  background-position: calc(100% - 15px) 52%, calc(100% - 10px) 52%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+/* The browser default file button is the one light rectangle in a dark app. */
+input[type='file'].input { padding: 5px; }
+input[type='file'].input::file-selector-button {
+  margin-right: 10px;
+  padding: 4px 10px;
+  background: var(--felt-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  color: var(--chalk-2);
+  font-family: var(--narrow);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+input[type='file'].input::file-selector-button:hover { background: var(--felt-3); color: var(--chalk); }
+
+input[type='checkbox'] { accent-color: var(--gold); width: 15px; height: 15px; margin-top: 1px; }
+
+.hint { font-size: 12px; color: var(--chalk-3); line-height: 1.4; }
+
+.panel {
+  background: var(--felt-1);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px var(--pad);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* Position colour, applied by a data attribute so one rule covers all six. */
+[data-pos='QB'] { --pos: var(--qb); }
+[data-pos='RB'] { --pos: var(--rb); }
+[data-pos='WR'] { --pos: var(--wr); }
+[data-pos='TE'] { --pos: var(--te); }
+[data-pos='K'] { --pos: var(--k); }
+[data-pos='DEF'] { --pos: var(--def); }
+
+.pos-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--pos) 16%, transparent);
+  color: var(--pos);
+  font-family: var(--narrow);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+/* ------------------------------------------------------------------- shell */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.masthead {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--line-soft);
+  flex: none;
+}
+
+.wordmark {
+  font-family: var(--narrow);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.wordmark span { color: var(--gold); }
+
+.masthead .hint { text-align: right; }
+.masthead .attribution { margin-left: auto; }
+
+/* ------------------------------------------------------------------- setup */
+
+.setup {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 22px 18px 60px;
+}
+
+.lede-side { display: grid; gap: 8px; justify-items: end; }
+.lede-acts { display: flex; gap: 6px; }
+
+/*
+ * THE RAIL
+ *
+ * The edge of the board: a hairline of gold, the draft you are about to run
+ * read back in the board's own terms, and the one action. It sits below the
+ * scroll rather than inside it, so it is always under the thumb. A desktop has
+ * the same action in the header where the eye already is, so the rail is a
+ * phone fixture and hides above 880.
+ */
+.start-rail { display: none; }
+
+.setup-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.setup-inner > .span-2 { grid-column: 1 / -1; }
+
+.setup-lede {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: end;
+  border-bottom: 1px solid var(--line-soft);
+  padding-bottom: 18px;
+}
+
+.setup-lede h1 {
+  font-family: var(--narrow);
+  font-size: clamp(30px, 5vw, 46px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.02;
+  text-transform: uppercase;
+}
+
+.setup-lede h1 em { font-style: normal; color: var(--gold); }
+
+.setup-body { padding: var(--pad); display: grid; gap: 14px; }
+
+.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+
+/* ---------------------------------------------------------- roster counters */
+
+.slot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.slot-row:last-child { border-bottom: 0; }
+
+.slot-name {
+  font-family: var(--narrow);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--chalk-2);
+}
+
+.stepper { display: flex; align-items: center; gap: 2px; }
+
+.stepper button {
+  width: 24px;
+  height: 24px;
+  background: var(--felt-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  color: var(--chalk-2);
+  line-height: 1;
+  font-size: 14px;
+}
+.stepper button:hover:not(:disabled) { background: var(--felt-3); color: var(--chalk); }
+.stepper button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.stepper output {
+  min-width: 26px;
+  text-align: center;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ sliders */
+
+.dial { display: grid; gap: 4px; padding: 9px 0; border-bottom: 1px solid var(--line-soft); }
+.dial:last-child { border-bottom: 0; }
+
+.dial-top {
+  display: grid;
+  grid-template-columns: 46px 1fr 34px;
+  align-items: center;
+  gap: 10px;
+}
+
+.dial.is-wide .dial-top { grid-template-columns: 96px 1fr 34px; }
+.dial.is-wide .hint { padding-left: 106px; }
+
+.dial-value {
+  font-family: var(--mono);
+  font-size: 13px;
+  text-align: right;
+  color: var(--chalk);
+}
+
+.dial-value[data-zero='true'] { color: var(--chalk-3); }
+
+.dial .hint { padding-left: 56px; }
+
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 20px;
+  background: transparent;
+  margin: 0;
+}
+
+input[type='range']::-webkit-slider-runnable-track {
+  height: 2px;
+  background: var(--line);
+}
+input[type='range']::-moz-range-track { height: 2px; background: var(--line); }
+
+/* The position dials run from minus five to plus five, so the middle is a real
+   value and not just the middle. Mark it. */
+.dial[data-pos] input[type='range']::-webkit-slider-runnable-track {
+  background: linear-gradient(90deg,
+    var(--line) calc(50% - 1px), var(--chalk-3) calc(50% - 1px),
+    var(--chalk-3) calc(50% + 1px), var(--line) calc(50% + 1px));
+}
+.dial[data-pos] input[type='range']::-moz-range-track {
+  background: linear-gradient(90deg,
+    var(--line) calc(50% - 1px), var(--chalk-3) calc(50% - 1px),
+    var(--chalk-3) calc(50% + 1px), var(--line) calc(50% + 1px));
+}
+
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--pos, var(--chalk));
+  border: 0;
+  cursor: grab;
+}
+input[type='range']::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--pos, var(--chalk));
+  border: 0;
+  cursor: grab;
+}
+
+.preset-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.preset {
+  background: var(--felt-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 5px 10px;
+  font-family: var(--narrow);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--chalk-2);
+}
+.preset:hover { border-color: var(--chalk-3); color: var(--chalk); }
+.preset[aria-pressed='true'] { background: var(--gold-dim); border-color: var(--gold); color: var(--gold); }
+
+/* One credit line, at the end of the settings, where it does not compete with
+   anything the reader came for. */
+.setup-footer {
+  grid-column: 1 / -1;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
+}
+
+/* ------------------------------------------------------------- draft screen */
+
+.clock {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 9px 18px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--felt-1);
+  flex: none;
+}
+
+.clock.is-yours { background: linear-gradient(180deg, #2a2717, var(--felt-1)); border-bottom-color: var(--gold-dim); }
+
+.clock-pick {
+  font-family: var(--mono);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.clock.is-yours .clock-pick { color: var(--gold); }
+
+.clock-who {
+  font-family: var(--narrow);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.clock-read { display: flex; align-items: center; gap: 18px; flex: 1; min-width: 0; }
+.clock-next { margin-left: auto; text-align: right; }
+.clock-acts { display: flex; gap: 6px; }
+.clock-acts .btn { white-space: nowrap; }
+.pool-find { display: flex; gap: 6px; }
+.pool-find .input { flex: 1; min-width: 0; }
+
+.stage {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(360px, 30%) minmax(0, 1fr) minmax(230px, 250px);
+  gap: 1px;
+  background: var(--line-soft);
+}
+
+.stage > * { background: var(--felt-0); min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+
+/* --------------------------------------------------------------- player pool */
+
+.pool-controls { padding: 9px var(--pad); border-bottom: 1px solid var(--line-soft); display: grid; gap: 8px; flex: none; }
+
+.filter-row { display: flex; gap: 4px; flex-wrap: wrap; }
+
+.chip {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 3px 9px;
+  font-family: var(--narrow);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--chalk-3);
+}
+.chip:hover { color: var(--chalk); border-color: var(--chalk-3); }
+.chip[aria-pressed='true'] {
+  color: var(--pos, var(--chalk));
+  border-color: var(--pos, var(--chalk-3));
+  background: color-mix(in srgb, var(--pos, var(--chalk)) 12%, transparent);
+}
+
+.pool-list { flex: 1; overflow-y: auto; }
+
+.player {
+  display: grid;
+  grid-template-columns: 20px 34px minmax(0, 1fr) 52px 46px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px var(--pad);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  border-left: 2px solid transparent;
+  text-align: left;
+  transition: background 100ms;
+}
+/*
+ * The list holds the whole pool, which is six hundred rows rather than three
+ * hundred. Every one stays in the document, so the search still reaches them
+ * and nothing is quietly missing; the browser is told it may skip laying out
+ * and painting the ones you cannot see. The intrinsic size is the real row
+ * height, so the scrollbar is honest before anything is measured.
+ */
+.player {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 83px;
+}
+
+.player:hover { background: var(--felt-1); border-left-color: var(--pos); }
+.player[aria-selected='true'] { background: var(--felt-2); border-left-color: var(--gold); }
+
+.player-name {
+  display: block;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.player-sub {
+  display: block;
+  font-size: 11px;
+  color: var(--chalk-3);
+  font-family: var(--narrow);
+  letter-spacing: 0.04em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The queue star. Small, quiet, and only coloured once it means something. */
+.star {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--chalk-3);
+}
+.star:hover { color: var(--chalk); }
+.star[aria-pressed='true'] { color: var(--gold); }
+
+.player-num { font-family: var(--mono); font-size: 12px; text-align: right; color: var(--chalk-2); }
+.player-num b { display: block; color: var(--chalk); font-weight: 500; }
+.player-num small { font-size: 10px; color: var(--chalk-3); }
+
+.injury { color: var(--qb); font-weight: 600; }
+
+/*
+ * THE SURVIVAL BAR
+ *
+ * The one question a mock draft exists to answer is whether a player is still
+ * there at your next turn, so that answer gets the only piece of ornament in
+ * the app. The width is the probability, read from the same ADP spread the
+ * computer teams draft against, so the bar and the room agree by construction.
+ */
+.survival {
+  grid-column: 3 / -1;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+}
+
+.survival-track {
+  height: 3px;
+  background: var(--felt-2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.survival-fill {
+  height: 100%;
+  background: var(--pos);
+  transition: width 220ms ease;
+}
+
+.survival-fill.is-thin { background: var(--qb); }
+
+.survival-odds {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--chalk-3);
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------- board */
+
+.board-scroll { flex: 1; overflow: auto; }
+
+.board-grid {
+  display: grid;
+  gap: 1px;
+  padding: 1px;
+  min-width: max-content;
+}
+
+.board-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--felt-0);
+  padding: 6px 4px;
+  font-family: var(--narrow);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+  text-align: center;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.board-head.is-you { color: var(--gold); }
+
+/* Whose column this was before it was sold. Said once, at the top. */
+.head-from {
+  display: block;
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--chalk-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.board-round {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--felt-0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--chalk-3);
+  border-right: 1px solid var(--line);
+}
+
+.board-round svg { opacity: 0.5; }
+
+.cell {
+  background: var(--felt-1);
+  border-left: 2px solid var(--pos, var(--line-soft));
+  padding: 4px 6px;
+  min-height: 42px;
+  overflow: hidden;
+}
+
+.cell.is-empty { background: var(--felt-0); border-left-color: var(--line-soft); }
+.cell.is-mine { background: var(--felt-2); }
+.cell.is-onclock {
+  background: var(--felt-2);
+  border-left-color: var(--gold);
+  box-shadow: inset 0 0 0 1px var(--gold-dim);
+}
+
+.cell-pick { font-family: var(--mono); font-size: 9px; color: var(--chalk-3); }
+.cell-name {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+.cell-meta { font-family: var(--narrow); font-size: 10px; color: var(--chalk-3); letter-spacing: 0.05em; }
+
+@keyframes land {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: none; }
+}
+.cell.is-new { animation: land 180ms ease-out; }
+
+/* --------------------------------------------------------------------- roster */
+
+.roster-list { flex: 1; overflow-y: auto; padding: 4px var(--pad) var(--pad); }
+
+.roster-slot {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.roster-slot.is-open { opacity: 0.42; }
+
+.slot-label {
+  font-family: var(--narrow);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+}
+
+.roster-name { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.kept-tag {
+  margin-left: 6px;
+  padding: 0 4px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  font-family: var(--narrow);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+}
+.roster-bye { font-family: var(--mono); font-size: 10px; color: var(--chalk-3); text-align: right; }
+.roster-bye.is-clash { color: var(--te); }
+
+.roster-divider {
+  margin: 10px 0 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+/* -------------------------------------------------------- modes and privacy */
+
+/*
+ * Two jobs, and the app has to say which one it is doing at a glance. A mock
+ * invents a room; the assistant invents nothing. Reading a simulated board as
+ * if it were your real draft is the one mistake this app could cause.
+ */
+.mode-switch {
+  display: inline-grid;
+  grid-auto-flow: column;
+  gap: 1px;
+  margin-top: 18px;
+  background: var(--line-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+.mode-switch button {
+  display: grid;
+  gap: 1px;
+  padding: 8px 16px;
+  background: var(--felt-1);
+  border: 0;
+  text-align: left;
+  font-family: var(--narrow);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+}
+.mode-switch button span {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--chalk-3);
+}
+.mode-switch button:hover { background: var(--felt-2); color: var(--chalk); }
+.mode-switch button[aria-pressed='true'] { background: var(--felt-3); color: var(--gold); }
+.mode-switch button[aria-pressed='true'] span { color: var(--chalk-2); }
+
+.mode-badge {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  font-family: var(--narrow);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+}
+
+/* A live feed says so, and says when it stops. */
+.live-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+  font-family: var(--narrow);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rb);
+  white-space: nowrap;
+}
+.live-dot::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 2s ease-in-out infinite;
+}
+.live-dot.is-down { color: var(--qb); }
+.live-dot.is-down::before { animation: none; }
+
+@keyframes pulse { 50% { opacity: 0.25; } }
+
+.mode-badge.is-live {
+  border-color: var(--qb);
+  color: var(--qb);
+}
+
+.anon-toggle {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 3px 9px;
+  font-family: var(--narrow);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+  white-space: nowrap;
+}
+.anon-toggle:hover { color: var(--chalk); border-color: var(--chalk-3); }
+.anon-toggle[aria-pressed='true'] {
+  color: var(--gold);
+  border-color: var(--gold-dim);
+  background: color-mix(in srgb, var(--gold) 8%, transparent);
+}
+
+/* ------------------------------------------------------------ player search */
+
+.picker { position: relative; }
+
+.picker-face {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 10px;
+  background: var(--felt-0);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  color: var(--chalk);
+  text-align: left;
+}
+.picker-face:hover { border-color: var(--chalk-3); }
+.picker-face[aria-expanded='true'] { border-color: var(--gold); }
+
+.picker-empty { flex: 1; color: var(--chalk-3); }
+.picker-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picker-caret { color: var(--chalk-3); font-size: 11px; }
+
+.picker-drop {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--felt-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: 0 14px 34px rgb(0 0 0 / 55%);
+  overflow: hidden;
+}
+
+.picker-input { border: 0; border-bottom: 1px solid var(--line-soft); border-radius: 0; }
+
+.picker-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 46vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.picker-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 5px 10px;
+  background: none;
+  border: 0;
+  border-left: 2px solid transparent;
+  color: var(--chalk);
+  text-align: left;
+}
+.picker-row.is-cursor { background: var(--felt-2); border-left-color: var(--pos, var(--gold)); }
+.picker-row[aria-selected='true'] .picker-name { color: var(--gold); }
+
+.picker-flag {
+  font-family: var(--narrow);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.picker-none { padding: 12px 10px; color: var(--chalk-3); font-size: 12px; }
+
+.picker-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 10px;
+  border-top: 1px solid var(--line-soft);
+}
+
+/* ------------------------------------------------- folding settings sections */
+
+.fold {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  padding: 0;
+  background: none;
+  border: 0;
+  text-align: left;
+}
+
+.panel.is-foldable > .panel-head { padding: 0 var(--pad); }
+.panel.is-foldable[data-open='false'] > .panel-head { border-bottom: 0; }
+
+/* The name of the section holds its line. When the row runs out of room it is
+   the league name that gets an ellipsis, not "Your Sleeper leagues". */
+.fold > .eyebrow { flex: none; white-space: nowrap; }
+
+/* The one reading you would have opened the section to check. */
+.fold-state {
+  min-width: 0;
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--chalk-2);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fold-caret {
+  flex: none;
+  width: 22px;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 15px;
+  color: var(--chalk-3);
+}
+.fold[aria-expanded='true'] .fold-caret { color: var(--gold); }
+.fold[aria-expanded='true'] .eyebrow { color: var(--chalk-2); }
+
+/* ------------------------------------------------- resuming a live draft */
+
+.resume-switch {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--chalk-3);
+  line-height: 1.4;
+}
+.resume-switch b { color: var(--chalk-2); font-weight: 600; }
+.resume-switch input { margin-top: 1px; flex: none; }
+
+/* --------------------------------------------------------------- keepers */
+
+.keeper-add {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+/*
+ * Keepers the import knows everything about except the round.
+ *
+ * They carry the gold rule the rest of the app reserves for "this one is on
+ * you". Nothing else on this screen is waiting on an answer, and a draft that
+ * starts with one of these unanswered starts with a player in the pool who is
+ * not really in it.
+ */
+.pending-list { display: grid; gap: 1px; background: var(--line-soft); }
+.pending-list > .eyebrow { background: var(--felt-1); padding: 8px var(--pad) 2px; margin: 0; }
+
+.pending {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 12px;
+  padding: 9px var(--pad);
+  background: var(--felt-1);
+  border-left: 2px solid var(--gold);
+}
+
+.pending-who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.pending-name { font-weight: 600; }
+.pending-why { grid-column: 1; margin: 0; }
+.pending-acts { grid-column: 2; grid-row: 1 / 3; display: flex; align-items: center; gap: 6px; }
+.pending-acts .input { min-width: 140px; }
+.pending-acts .btn { white-space: nowrap; }
+
+@media (max-width: 880px) {
+  .keeper-add { grid-template-columns: minmax(0, 1fr); }
+  .mode-switch { grid-auto-flow: row; }
+
+  /* The round select and the way out get a row of their own, and the select
+     leads: choosing a round is the answer, leaving him out is the exception. */
+  .pending { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .pending-why, .pending-acts { grid-column: 1; }
+  .pending-acts { grid-row: auto; }
+  .pending-acts .input { flex: 1; min-width: 0; }
+}
+
+/* A kept player is on a roster, not drafted to it. */
+.cell.is-preset { border-left-style: dashed; }
+
+/*
+ * A pick that changed hands.
+ *
+ * It stays in the column of the seat that owned it, because that is where it
+ * sits in the order, and says who makes it. Naming the new owner on the sticker
+ * is the only honest way to show it: move the cell to the buyer's column and
+ * the board stops being a picture of the order.
+ */
+.cell.is-traded { border-top: 1px dashed var(--line); }
+
+.cell-owner {
+  display: block;
+  font-family: var(--narrow);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: var(--chalk-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Settled, and the draft has not reached it yet. Present but not yet spent. */
+.cell.is-ahead { background: var(--felt-0); opacity: 0.72; }
+.cell.is-ahead .cell-name { font-weight: 400; }
+
+/* ------------------------------------------------- leagues and name mapping */
+
+.league-chip { display: inline-flex; align-items: stretch; }
+
+.league-chip .preset { border-radius: var(--r) 0 0 var(--r); border-right: 0; }
+
+.league-drop {
+  background: var(--felt-2);
+  border: 1px solid var(--line);
+  border-left: 0;
+  border-radius: 0 var(--r) var(--r) 0;
+  padding: 0 7px;
+  color: var(--chalk-3);
+  font-size: 13px;
+  line-height: 1;
+}
+.league-drop:hover { color: var(--qb); border-color: var(--chalk-3); }
+.league-chip[data-active='true'] .league-drop { border-color: var(--gold); }
+
+/*
+ * One unresolved name per row: what your file said, what it might have meant,
+ * and the two ways out. The rows are wide and calm on purpose. This is the one
+ * screen where a wrong click quietly puts the wrong player on your board.
+ */
+.resolve-list { display: grid; gap: 1px; margin-top: 10px; background: var(--line-soft); }
+
+.resolve {
+  display: grid;
+  grid-template-columns: minmax(150px, 210px) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 9px var(--pad);
+  background: var(--felt-1);
+}
+
+.resolve-name { display: grid; gap: 1px; min-width: 0; }
+.resolve-name b { font-weight: 600; }
+
+.resolve-acts { display: flex; gap: 6px; }
+
+.link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--chalk-2);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font: inherit;
+}
+.link:hover { color: var(--gold); }
+
+@media (max-width: 880px) {
+  .resolve { grid-template-columns: minmax(0, 1fr); }
+  .resolve-acts .btn { flex: 1; }
+}
+
+/* -------------------------------------------------------------------- results */
+
+.results { overflow-y: auto; padding: 22px 18px 60px; }
+.results-inner { max-width: 1180px; margin: 0 auto; display: grid; gap: 18px; }
+
+.verdict {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 26px;
+  align-items: start;
+  padding: 20px var(--pad);
+}
+
+.verdict-grade {
+  font-family: var(--narrow);
+  font-size: 86px;
+  font-weight: 700;
+  line-height: 0.82;
+  letter-spacing: -0.03em;
+  margin-top: 6px;
+}
+
+/*
+ * The one place a colour carries a judgement rather than a category. A losing
+ * draft printed in the same celebratory gold as a winning one would be the
+ * interface lying politely.
+ */
+.verdict-grade[data-band='top'] { color: var(--gold); }
+.verdict-grade[data-band='middle'] { color: var(--chalk); }
+.verdict-grade[data-band='bottom'] { color: var(--qb); }
+
+.stat-row { display: flex; flex-wrap: wrap; gap: 26px; }
+.stat-row div { display: grid; gap: 1px; }
+.stat-row b { font-family: var(--mono); font-size: 21px; font-weight: 500; }
+
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th {
+  text-align: left;
+  padding: 7px var(--pad);
+  font-family: var(--narrow);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--chalk-3);
+  border-bottom: 1px solid var(--line);
+}
+.table td { padding: 7px var(--pad); border-bottom: 1px solid var(--line-soft); }
+.table tr.is-mine td { background: var(--felt-2); }
+.table tr.is-mine td:first-child { box-shadow: inset 2px 0 0 var(--gold); }
+.table .right { text-align: right; }
+
+.gain-pos { color: var(--rb); }
+.gain-neg { color: var(--qb); }
+
+/* --------------------------------------------------------------------- misc */
+
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px var(--pad);
+  border: 1px solid var(--gold-dim);
+  border-radius: var(--r);
+  background: color-mix(in srgb, var(--gold) 7%, transparent);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.banner.is-bad { border-color: #6d3532; background: color-mix(in srgb, var(--qb) 8%, transparent); }
+
+.centred {
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  justify-items: center;
+  height: 100%;
+  text-align: center;
+  padding: 40px;
+}
+
+.tabs { display: none; }
+
+/*
+ * Two labels, one control. "Simulate to the end" is the right words on a
+ * desktop and four wrapped lines on a phone. The narrow one is not an
+ * abbreviation of the wide one so much as the same instruction with the
+ * obvious parts left out.
+ */
+.on-narrow { display: none; }
+
+/* ------------------------------------------------------------------ narrower */
+
+@media (max-width: 1180px) {
+  .stage { grid-template-columns: minmax(320px, 40%) minmax(0, 1fr); }
+  .stage > .roster-col { display: none; }
+  .stage.show-roster { grid-template-columns: minmax(320px, 40%) minmax(0, 1fr); }
+  .stage.show-roster > .board-col { display: none; }
+  .stage.show-roster > .roster-col { display: flex; }
+}
+
+@media (max-width: 880px) {
+  .setup-inner { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .setup-lede { grid-template-columns: minmax(0, 1fr); align-items: start; }
+  .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  /*
+   * The settings screen came to four thousand pixels on a 390 px phone, five
+   * screens of scrolling to reach a control. The sections fold, so the whole
+   * of it is one screen of labelled rows and you open the one you want.
+   */
+  .setup { padding: 12px 12px 16px; }
+  .setup-body { gap: 12px; }
+
+  /*
+   * The lede is a headline and a mode switch, and on a phone it was half the
+   * first screen. The headline drops to one line and the reading of the board
+   * goes with it: the same numbers are in the sections below.
+   */
+  .setup-lede { padding-bottom: 12px; gap: 12px; }
+  .setup-lede h1 { font-size: 27px; }
+  .setup-lede h1 br { display: none; }
+  .setup-lede h1 em::before { content: ' '; }
+  .lede-side { justify-items: stretch; }
+  .lede-side > .hint { display: none; }
+  /*
+   * Start moved to the rail. Refresh ADP did not: it is a thing you do once
+   * when the numbers look old, and giving it the full width of a phone would
+   * make it read as the action of the screen, which it is not.
+   */
+  .lede-acts { justify-content: flex-end; }
+  .lede-acts .btn.is-primary { display: none; }
+
+  .tabs { display: flex; gap: 1px; flex: none; background: var(--line-soft); }
+  .tabs button {
+    flex: 1;
+    background: var(--felt-0);
+    border: 0;
+    padding: 10px 6px;
+    font-family: var(--narrow);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--chalk-3);
+  }
+  .tabs button[aria-pressed='true'] { color: var(--gold); box-shadow: inset 0 -2px 0 var(--gold); }
+
+  .stage, .stage.show-roster { grid-template-columns: minmax(0, 1fr); }
+  .stage > * { display: none; }
+  .stage > .is-active { display: flex; }
+
+  /* The wordmark is not worth 65 px of a screen you are drafting off. */
+  .masthead { padding: 7px 12px; gap: 10px; }
+  .masthead .attribution { display: none; }
+  .wordmark { font-size: 15px; letter-spacing: 0.16em; }
+
+  .on-wide { display: none; }
+  .on-narrow { display: inline; }
+
+  /*
+   * THE DRAFT RAIL
+   *
+   * The list of players is the screen. It had 307 of 844 pixels, four players,
+   * because the clock and its buttons took 226 at the top and the pool put a
+   * heading and two more rows of chips above the first name.
+   *
+   * The clock moves to the bottom instead. It is not only about pixels: the
+   * three readings and the four actions are one thing, "what pick is it and
+   * what do I do", and at the bottom of a phone that thing is under the thumb
+   * rather than a stretch away. The list gets everything above it.
+   */
+  .shell > .masthead { order: 0; }
+  .shell > .tabs { order: 1; }
+  .shell > .stage { order: 2; }
+  .shell > .clock {
+    order: 3;
+    display: grid;
+    gap: 7px;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    border-bottom: 0;
+    border-top: 1px solid var(--line-soft);
+    box-shadow: 0 -10px 24px rgb(0 0 0 / 40%);
+  }
+  .clock.is-yours {
+    background: linear-gradient(0deg, #2a2717, var(--felt-1));
+    border-top-color: var(--gold);
+  }
+
+  /* One row: the pick, whose it is, and when yours comes back. With the labels
+     gone their paragraph margins were still holding the row open at 63 px. */
+  .clock-read { gap: 10px; }
+  .clock-read .eyebrow { display: none; }
+  .clock-read p { margin: 0; }
+  .clock-pick { font-size: 21px; }
+  .clock-who { font-size: 13px; }
+  .clock-team { min-width: 0; }
+  .clock-team .clock-who {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Four actions, one row. Settings is a cog: it is the one you press least
+     and the only one whose meaning survives losing its word. */
+  .clock-acts { overflow: visible; }
+  .clock-acts .btn { flex: 1 1 auto; padding: 7px 8px; }
+  .clock-acts .act-settings { flex: 0 0 44px; font-size: 16px; }
+
+  /* The heading read "595 available" over the search box that now says so. */
+  .pool-col > .panel-head { display: none; }
+  .sort-row { display: none; }
+  .pool-find .pool-sort { flex: 0 0 118px; }
+
+  /*
+   * TAP TARGETS
+   *
+   * Anything you press against a running draft clock clears 44 px. A missed
+   * tap costs a pick here, not just a moment.
+   */
+  .btn { min-height: 44px; }
+  .tabs button { min-height: 48px; }
+  /* 36, not 44. This one sets the height of the masthead above every screen,
+     and it is pressed once before you record something, not against a clock. */
+  .anon-toggle { min-height: 36px; padding: 3px 12px; }
+  /* Tall enough for a thumb, tight enough that nine of them still make one
+     row. A wrapped filter row costs a phone another forty eight pixels of
+     chrome before the first player appears. */
+  .chip { min-height: 44px; padding: 4px 10px; }
+  .pool-controls { padding: 8px 10px; gap: 6px; }
+  .pool-controls .filter-row { gap: 4px; }
+  .star { min-width: 44px; min-height: 44px; font-size: 17px; }
+
+  /*
+   * The settings screen is configured once, at leisure, and every row you
+   * enlarge pushes the next one further down. 44 px each would turn nine
+   * roster rows into a page of its own, so these clear 40 and stop there.
+   */
+  .stepper button { width: 40px; height: 40px; font-size: 17px; }
+  /* A link inside a sentence cannot be 44 px tall without breaking the line it
+     sits in. It can be 44 px of hit area around the same text. */
+  .setup-body .link { padding: 13px 4px; margin: -13px -4px; }
+  .preset { min-height: 40px; padding: 6px 14px; }
+  .league-drop { min-width: 40px; }
+  .input, select.input { min-height: 44px; }
+  input[type='checkbox'] { width: 22px; height: 22px; }
+
+  /*
+   * A slider is dragged rather than tapped, and a two pixel track under a
+   * fourteen pixel thumb is a poor thing to find with a thumb. The track stays
+   * thin; the reachable band around it does not.
+   */
+  input[type='range'] { height: 44px; }
+  input[type='range']::-webkit-slider-thumb { width: 22px; height: 22px; margin-top: -10px; }
+  input[type='range']::-moz-range-thumb { width: 22px; height: 22px; }
+
+  .verdict { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+
+  /*
+   * RESULTS ON A PHONE
+   *
+   * Seven columns do not fit in 406 px, and a table that overflows takes the
+   * page with it: the whole screen gained a horizontal scrollbar and clipped
+   * its own prose mid-word. Two columns come out. Bye clashes and roster shape
+   * are worth reading, and they are not worth reading before the score.
+   */
+  .hide-narrow { display: none; }
+
+  /* Four readings in two columns rather than one row that cannot hold them. */
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 18px;
+  }
+  .stat-row b { overflow-wrap: anywhere; }
+
+  .table th, .table td { padding: 8px 10px; }
+
+  /* ------------------------------------------------------------- the rail */
+
+  .start-rail {
+    display: grid;
+    gap: 6px;
+    flex: none;
+    padding: 9px 12px calc(9px + env(safe-area-inset-bottom));
+    background: var(--felt-1);
+    border-top: 1px solid var(--gold-dim);
+    box-shadow: 0 -10px 24px rgb(0 0 0 / 40%);
+  }
+  .start-rail .btn { min-height: 50px; font-size: 14px; }
+  .start-read {
+    margin: 0;
+    font-size: 12px;
+    color: var(--chalk-2);
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .start-block { margin: 0; text-align: center; }
+
+  /*
+   * KEEPERS ON A PHONE
+   *
+   * Five columns of a table in 390 px is four characters a column. Each keeper
+   * becomes a block instead: the pick label and the player on one line, who
+   * keeps him under it, and remove on the right where the thumb is.
+   */
+  .keeper-table thead { display: none; }
+  .keeper-table, .keeper-table tbody, .keeper-table tr, .keeper-table td { display: block; }
+  .keeper-table tr {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 2px 8px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .keeper-table td { padding: 0; border: 0; }
+  .keeper-table td:nth-child(1) { grid-row: 1; color: var(--chalk-3); font-size: 12px; }
+  .keeper-table td:nth-child(2) { grid-row: 1; }
+  .keeper-table td:nth-child(3) { grid-row: 2; grid-column: 1 / 3; font-size: 12px; color: var(--chalk-2); }
+  .keeper-table td:nth-child(4) { display: none; }
+  .keeper-table td:nth-child(5) { grid-row: 1 / 3; grid-column: 3; }
+  /* The row is the highlight now, not its cells: as grid items the cells no
+     longer span it and the fill came out in patches. */
+  .keeper-table tr.is-mine td { background: none; }
+  .keeper-table tr.is-mine td:first-child { box-shadow: none; }
+  .keeper-table tr.is-mine {
+    background: var(--felt-2);
+    box-shadow: inset 2px 0 0 var(--gold);
+  }
+  .keeper-table .link { min-height: 44px; padding: 0 6px; }
+}
+
+@media (max-width: 560px) {
+  /*
+   * A settings heading and its help text stop sharing a row. Side by side, the
+   * heading is squeezed into a column narrow enough to break "YOUR SLEEPER
+   * LEAGUES" over three lines while the help text sits comfortably beside it.
+   *
+   * Scoped to the settings screen on purpose. The draft screen's headings are
+   * two short readings that already share a line, and stacking them there
+   * would spend a row of a phone to solve a problem it does not have.
+   */
+  .setup .panel:not(.is-foldable) > .panel-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+
+  /*
+   * Paired columns become rows. Half of 406 px is 159 px, which is wide enough
+   * for a select and not for a sentence: the league ID field was showing its
+   * placeholder as "the long nur".
+   */
+  .grid-2 { grid-template-columns: minmax(0, 1fr); }
+
+  /* An input and its button share a row only if both still fit. */
+  .field > div { flex-wrap: wrap; }
+  .field > div > .input { flex: 1 1 200px; }
+  .field > div > .btn { flex: 0 0 auto; }
+}
+
+@media (max-width: 480px) {
+  /*
+   * The masthead meta stacked to four lines and took ninety pixels off the top
+   * of every screen. Both facts it carries are already on screen: the scoring
+   * format sits in the pool heading, and the pool size in the settings.
+   */
+  .masthead .hint:not(.attribution) { display: none; }
+  .masthead { gap: 10px; }
+  .mode-badge { margin-left: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

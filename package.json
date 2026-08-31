@@ -1,0 +1,20 @@
+{
+  "name": "fantasy-football-draft-room",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "description": "A fantasy football draft tool: a tunable mock draft room, and an assistant that follows a real Sleeper draft",
+  "scripts": {
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "dev": "concurrently -n server,client -c green,yellow \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "start": "npm --prefix server start",
+    "typecheck": "npm --prefix client run typecheck",
+    "engine:test": "npm --prefix client run engine:test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

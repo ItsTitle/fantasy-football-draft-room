@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "noEmit": true,
+    // `vite/client` as well as node: engine/types.ts refers to storage.ts,
+    // which reaches config.ts, which reads import.meta.env.
+    "types": ["node", "vite/client"]
+  },
+  "include": ["src/engine"],
+  "exclude": []
+}

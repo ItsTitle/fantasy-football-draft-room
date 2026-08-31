@@ -1,0 +1,44 @@
+{
+  "_README": [
+    "Copy this file to fixtures.local.json, which git ignores, and put your own",
+    "leagues in it. `npm run engine:test` then runs the three blocks that need a",
+    "real Sleeper league. Without the file those blocks are skipped and every",
+    "other check still runs.",
+    "",
+    "A league ID is the long run of digits in the league's Sleeper web address.",
+    "A draft ID is the one in the draft's address. Both identify real people, so",
+    "the file you fill in must stay out of git."
+  ],
+
+  "leagues": [
+    {
+      "_": "Leagues the import check reads. It asserts these exact settings come back.",
+      "id": "1234567890123456789",
+      "teams": 10,
+      "rounds": 16,
+      "scoring": "standard"
+    },
+    {
+      "id": "1234567890123456780",
+      "teams": 12,
+      "rounds": 15,
+      "scoring": "half-ppr"
+    }
+  ],
+
+  "keeperLeague": {
+    "_": "A keeper league with traded picks. The awkward cases live here.",
+    "id": "1234567890123456781",
+    "teams": 12,
+    "rounds": 16,
+    "scoring": "ppr"
+  },
+
+  "finishedDraft": {
+    "_": "A draft that is over, so its numbers never change. Usually last season's draft for keeperLeague.",
+    "id": "1234567890123456782",
+    "picks": 192,
+    "keepers": 12,
+    "minMatched": 185
+  }
+}

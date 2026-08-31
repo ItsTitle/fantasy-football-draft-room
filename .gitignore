@@ -1,0 +1,18 @@
+node_modules/
+dist/
+server/data/cache/
+.env
+.env.local
+.env.*.local
+
+# Names real Sleeper leagues, so it never goes in the repo. See
+# client/fixtures.example.json.
+client/fixtures.local.json
+
+# Playwright MCP scratch output from browser checks
+.playwright-mcp/
+
+# Editor and OS noise
+.vs/
+.DS_Store
+*.local

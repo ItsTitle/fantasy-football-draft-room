@@ -1,0 +1,7 @@
+# The workstation is Windows and the server is Debian. Normalise in the repo so
+# a checkout on either one does not rewrite every file.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
