@@ -38,6 +38,16 @@ const MAX_ROWS = 2000;
 /** Unmatched rows offered a suggestion. Past this nobody is still reading. */
 const MAX_SUGGESTED = 100;
 
+/**
+ * Characters kept from one note.
+ *
+ * A note is a sentence or two you wrote about a player, not an essay. The cap
+ * is here because a note is the one free text field in the app: everything
+ * else on a row is a number from a feed. Longer notes are cut rather than
+ * refused, so a fat export still loads.
+ */
+const MAX_NOTE = 500;
+
 /** Split one CSV line, honouring quoted fields. */
 function splitLine(line) {
   const out = [];
@@ -73,9 +83,9 @@ function splitLine(line) {
  * best score wins.
  */
 
-const NEVER_RANK = ['diff', 'pos rank', 'posrank', 'tier', 'bye', 'age', 'id'];
-const NEVER_NAME = ['pos', 'team', 'rank', 'bye', 'tier', 'id', 'diff'];
-const NEVER_POS = ['rank', 'diff', 'id'];
+const NEVER_RANK = ['diff', 'pos rank', 'posrank', 'tier', 'bye', 'age', 'id', 'note', 'comment'];
+const NEVER_NAME = ['pos', 'team', 'rank', 'bye', 'tier', 'id', 'diff', 'note', 'comment'];
+const NEVER_POS = ['rank', 'diff', 'id', 'note', 'comment'];
 
 /** Weighted candidates, highest first. An exact hit beats a contains hit. */
 const NAME_COLS = [
@@ -89,6 +99,18 @@ const RANK_COLS = [
   ['#', 60], ['adp', 40], ['avg', 35],
 ];
 const TIER_COLS = [['tier', 100]];
+
+/**
+ * What you wrote about a player.
+ *
+ * `notes` before `note` because an export that has both means the plural one.
+ * A header holding a player's name is banned outright: "player notes" is the
+ * note, but a file whose only column is "notes" listing names is not.
+ */
+const NOTE_COLS = [
+  ['notes', 100], ['note', 95], ['comment', 90], ['comments', 90], ['thoughts', 85],
+];
+const NEVER_NOTE = ['rank', 'tier', 'bye', 'adp', 'pos', 'team', 'id'];
 
 /**
  * Pick the column that best fits a role.
@@ -119,6 +141,52 @@ function findColumn(header, candidates, banned = []) {
   });
 
   return bestIndex;
+}
+
+/**
+ * Read the note out of a row, putting back the commas a note is likely to hold.
+ *
+ * A note is prose and prose has commas, so an unquoted note splits into
+ * several cells and the row ends up longer than its header. When the note is
+ * the last column, the tail is unambiguous: everything past it is the rest of
+ * the sentence, so it is joined back on. Anywhere else the row is genuinely
+ * ambiguous and the note is read as written, which is why the screen says to
+ * quote it or move it to the end.
+ *
+ * @param {string[]} cells    the row, already split
+ * @param {number} at         the note column index
+ * @param {number} width      how many columns the header declared
+ */
+function readNote(cells, at, width, line) {
+  if (at < 0) return null;
+
+  // The row is no wider than its header, so the cell is the whole note.
+  if (!(at === width - 1 && cells.length > width)) {
+    return (cells[at] || '').trim().slice(0, MAX_NOTE) || null;
+  }
+
+  // The note ran past its cell. Take the rest of the line as written rather
+  // than rejoining the split pieces: the split trims each one, so rejoining
+  // returns "him,because" for a note that said "him, because".
+  return tailFrom(line, at).slice(0, MAX_NOTE) || null;
+}
+
+/** Everything after the `n`th top level separator, exactly as it was typed. */
+function tailFrom(line, n) {
+  let seen = 0;
+  let quoted = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const c = line[i];
+    if (quoted) {
+      if (c === '"' && line[i + 1] === '"') i += 1;
+      else if (c === '"') quoted = false;
+    } else if (c === '"') quoted = true;
+    else if (c === ',' || c === '	') {
+      seen += 1;
+      if (seen === n) return line.slice(i + 1).trim();
+    }
+  }
+  return '';
 }
 
 /**
@@ -263,8 +331,9 @@ export function parseRankings(text, pool, overrides = {}, rankColumn = null) {
         ? rankColumn
         : findColumn(first, RANK_COLS, NEVER_RANK),
       tier: findColumn(first, TIER_COLS),
+      note: findColumn(first, NOTE_COLS, NEVER_NOTE),
     }
-    : { name: 0, position: -1, team: -1, rank: -1, tier: -1 };
+    : { name: 0, position: -1, team: -1, rank: -1, tier: -1, note: -1 };
 
   const rows = hasHeader ? lines.slice(1) : lines;
   const index = indexPool(pool);
@@ -285,6 +354,7 @@ export function parseRankings(text, pool, overrides = {}, rankColumn = null) {
     const rawRank = columns.rank >= 0 ? parseFloat(cells[columns.rank]) : NaN;
     const rank = Number.isFinite(rawRank) ? rawRank : order;
     const tierValue = columns.tier >= 0 ? parseInt(cells[columns.tier], 10) : null;
+    const note = readNote(cells, columns.note, first.length, line);
     const position = columns.position >= 0 ? barePosition(cells[columns.position]) : '';
     const team = normTeam(columns.team >= 0 ? cells[columns.team] : '');
 
@@ -360,6 +430,7 @@ export function parseRankings(text, pool, overrides = {}, rankColumn = null) {
       position: hit.position,
       rank,
       tier: Number.isFinite(tierValue) ? tierValue : null,
+      note,
       sourceName: rawName,
       matchedBy: tier,
       overrideKey: key,
@@ -372,7 +443,15 @@ export function parseRankings(text, pool, overrides = {}, rankColumn = null) {
   const best = new Map();
   for (const e of entries) {
     const prior = best.get(e.id);
-    if (!prior || e.rank < prior.rank) best.set(e.id, e);
+    if (!prior || e.rank < prior.rank) {
+      // The better rank wins the row, but it keeps the loser's note when it
+      // has none of its own. A note you wrote is not worth dropping silently
+      // because the same player appears twice.
+      if (prior && !e.note) e.note = prior.note;
+      best.set(e.id, e);
+    } else if (!prior.note && e.note) {
+      prior.note = e.note;
+    }
   }
 
   const deduped = [...best.values()].sort((a, b) => a.rank - b.rank);
@@ -398,6 +477,7 @@ export function parseRankings(text, pool, overrides = {}, rankColumn = null) {
       rankIndex: columns.rank,
       rankWasChosen: rankColumn != null,
       tier: columns.tier >= 0 ? first[columns.tier] : null,
+      note: columns.note >= 0 ? first[columns.note] : null,
       // Every header, so the user can point at a different one.
       headers: hasHeader ? first : [],
     },

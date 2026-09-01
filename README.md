@@ -66,6 +66,14 @@ listed with the closest players on the board beside it: map it once, and the
 mapping is kept and applied to every list you load afterwards. Your file itself
 is kept too, so a correction takes effect immediately without re-uploading.
 
+**Your notes on a player, where you have to act on them.** A note shows under
+the player in the pool, in your own words, next to the numbers everyone else
+has. Notes arrive two ways and both are optional: a `Notes` column in the
+ranking file you already upload, and a notes file of your own. The notes file
+wins, because a ranking export is replaced every time its publisher updates and
+should not quietly undo something you wrote. Long notes clamp to one line and
+open on a tap; short ones just sit there.
+
 **A tunable room.** A slider per position from &minus;5 to +5, a reach dial, a
 roster need dial, and seven presets. Every setting moves players by a number of
 picks, and the panel says how many.
@@ -252,6 +260,31 @@ silent miss drops a player off your board and you never learn which one.
 
 ---
 
+## Reading a notes file
+
+A notes file is a ranking file with the ranking left out: a column of names and
+a column of what you think about them. It runs through the same six matching
+tiers and reports the same unmatched names, so a mapping you saved under Your
+rankings applies here too.
+
+| | |
+|---|---|
+| Required | a name column, and a column named `Notes`, `Note` or `Comment` |
+| Optional | `Pos` and `Team`, which are what let "Cameron Ward" reach Cam Ward |
+| Ignored | the row order, and any ranking column |
+
+**Put the notes column last.** A note is prose and prose has commas, so an
+unquoted note splits into several cells. When the note is the last column the
+rest of the line is unambiguously the rest of the sentence, so it is joined back
+on as typed. Anywhere else the row is genuinely ambiguous and the note is read
+as written, which is why the screen tells you to move it or quote it.
+
+A note is cut at 500 characters. Everything on that row except the note is a
+number from a feed; the note is the only thing you wrote, so it is the only one
+with no upstream to blame for its length.
+
+---
+
 ## The survival bar
 
 Beside every player is a bar and a percentage: the chance that player is still
@@ -295,7 +328,7 @@ draft-room/
         │   ├── survival.ts  the odds a player lasts
         │   ├── grade.ts     the two numbers at the end
         │   └── selftest.ts  the checks, run against live data
-        └── components/      setup, draft, board, pool, roster, results
+        └── components/      setup, draft, board, pool, roster, results, notes
 ```
 
 The draft runs in the browser. A pick has to land the instant you click it, and

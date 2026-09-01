@@ -193,6 +193,8 @@ export interface RankingEntry {
   position: Position;
   rank: number;
   tier: number | null;
+  /** What you wrote about this player, when the file carried a notes column. */
+  note: string | null;
   /** The name as your file wrote it, which is not always the board's name. */
   sourceName: string;
   /** Which tier found this player. Anything but `exact` is worth a glance. */
@@ -230,6 +232,8 @@ export interface RankingColumns {
   /** True when you picked the rank column yourself rather than letting it detect. */
   rankWasChosen: boolean;
   tier: string | null;
+  /** The header the note was read from, or null when the file had none. */
+  note: string | null;
   headers: string[];
 }
 
@@ -249,6 +253,21 @@ export interface RankingSet {
  * An explicit null means "leave this name out and stop asking".
  */
 export type Overrides = Record<string, string | null>;
+
+/**
+ * A file of notes, matched onto the board.
+ *
+ * A notes file is a ranking file with the ranking left out, so it goes through
+ * the same six matching tiers and reports the same unmatched names.
+ */
+export interface NoteSet {
+  label: string;
+  notes: { id: string; name: string; note: string }[];
+  unmatched: UnmatchedName[];
+  ignored: { name: string; position: string | null; key: string }[];
+  matchRate: number;
+  columns: RankingColumns;
+}
 
 /**
  * A Sleeper league you draft in, with its settings kept.

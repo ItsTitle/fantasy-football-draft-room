@@ -1,6 +1,6 @@
 import type {
-  Board, LeagueImport, LeagueMember, LeagueSetup, LivePicks, LiveDraftState, Overrides,
-  RankingSet,
+  Board, LeagueImport, LeagueMember, LeagueSetup, LivePicks, LiveDraftState, NoteSet,
+  Overrides, RankingSet,
 } from './engine/types';
 
 const BASE = import.meta.env.VITE_API_BASE || '/api';
@@ -50,6 +50,29 @@ export async function matchRankings(
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ csv, overrides, rankColumn }),
+  });
+  if (!res.ok) return fail(res);
+  const body = await res.json();
+  return { ...body, label };
+}
+
+/**
+ * Match a file of notes against the board.
+ *
+ * Separate from the rankings on purpose. A ranking export belongs to whoever
+ * published it and you replace it whenever they publish again; your notes are
+ * yours and outlive that.
+ */
+export async function matchNotes(
+  q: BoardQuery,
+  csv: string,
+  label: string,
+  overrides: Overrides,
+): Promise<NoteSet> {
+  const res = await fetch(BASE + '/notes?' + query(q), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ csv, overrides }),
   });
   if (!res.ok) return fail(res);
   const body = await res.json();

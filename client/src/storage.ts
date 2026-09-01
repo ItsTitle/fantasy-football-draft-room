@@ -33,6 +33,14 @@ export interface Saved {
   rankings: RankingSet | null;
   /** The file itself, so a new override can be applied without re-uploading. */
   rankingSource: RankingSource | null;
+  /**
+   * Your notes file, kept the same way and for the same reason.
+   *
+   * Separate from `rankingSource` because the two have different lifetimes. A
+   * ranking export is replaced every time its publisher updates; a note you
+   * wrote about a player should survive that.
+   */
+  noteSource: RankingSource | null;
   /** Name to player mappings you made by hand. These outlive every upload. */
   overrides: Overrides;
   savedLeagues: SavedLeague[];
@@ -105,6 +113,7 @@ export function defaults(): Saved {
     cpu: { ...DEFAULT_CPU, positionBias: { ...DEFAULT_CPU.positionBias } },
     rankings: null,
     rankingSource: null,
+    noteSource: null,
     overrides: {},
     savedLeagues: SEED_LEAGUES.map((l) => ({ ...l })),
     activeLeagueId: null,
@@ -143,6 +152,7 @@ export function load(): Saved {
         positionBias: { ...base.cpu.positionBias, ...(saved.cpu?.positionBias || {}) },
       },
       overrides: saved.overrides || {},
+      noteSource: saved.noteSource ?? null,
       myManager: saved.myManager ?? DEFAULT_MANAGER,
       resumeLive: saved.resumeLive ?? false,
       // Older saves predate the per league fields. Fill them rather than let a

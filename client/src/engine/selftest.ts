@@ -590,6 +590,87 @@ async function main() {
       && dropped.ignored.length === 1, JSON.stringify(dropped.ignored));
   }
 
+  console.log('\nPlayer notes');
+  {
+    const NL = String.fromCharCode(10);
+    const post = async (path: string, csv: string) => {
+      const r = await fetch(API + '/api/' + path + '?scoring=standard&teams=12&adpSource=sleeper', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ csv }),
+      });
+      return r.json();
+    };
+    type Noted = { sourceName: string; name: string; note: string | null };
+
+    // A notes column rides along in a ranking file and must not be mistaken
+    // for the ranking. Six columns here contain a word the scorer looks at.
+    const withNotes = await post('rankings', [
+      'Player,Position,Team,ETR Rank,ADP,Notes',
+      'Jahmyr Gibbs,RB,DET,1,1.5,Locked in.',
+      'Kenneth Walker,RB,KC,2,22.7,',
+      'Omarion Hampton,RB,LAC,3,12.2,Rookie workload is the whole question, and nobody says so.',
+    ].join(NL));
+
+    check('a notes column is found', withNotes.columns.note === 'notes',
+      String(withNotes.columns.note));
+    check('a notes column does not steal the ranking',
+      withNotes.columns.rank === 'etr rank', String(withNotes.columns.rank));
+
+    const gibbs = withNotes.entries.find((e: Noted) => e.sourceName === 'Jahmyr Gibbs');
+    const walker = withNotes.entries.find((e: Noted) => e.sourceName === 'Kenneth Walker');
+    const hampton = withNotes.entries.find((e: Noted) => e.sourceName === 'Omarion Hampton');
+    check('a note reaches its player', gibbs?.note === 'Locked in.', String(gibbs?.note));
+    check('an empty note is no note', walker?.note === null, String(walker?.note));
+
+    // The note is the last column, so the comma inside it is part of the
+    // sentence rather than the start of another column. The spacing after it
+    // has to survive too: these are words somebody typed.
+    check('a comma inside a note keeps the note whole',
+      hampton?.note === 'Rookie workload is the whole question, and nobody says so.',
+      String(hampton?.note));
+
+    // A notes file is a ranking file with the ranking left out, so a bare list
+    // of names and notes works and matches on the name alone.
+    const bare = await post('notes', [
+      'Player,Notes',
+      'Jahmyr Gibbs,From the notes file.',
+      'Nobody Realhere,This one matches nothing.',
+    ].join(NL));
+
+    check('a bare notes file matches on the name alone', bare.notes.length === 1,
+      bare.notes.length + ' of 1');
+    check('a name that matches nothing is reported, not dropped',
+      bare.unmatched.length === 1 && bare.unmatched[0].name === 'Nobody Realhere',
+      JSON.stringify(bare.unmatched.map((u: { name: string }) => u.name)));
+
+    // A position and a team are optional and they are what the awkward tiers
+    // run on: "Cameron Ward" reaches "Cam Ward" through surname, position and
+    // team, and reaches nobody without them. This is why the screen asks for
+    // the columns rather than only the name.
+    const rich = await post('notes', [
+      'Player,Pos,Team,Notes',
+      'Cameron Ward,QB,TEN,Matched on the surname, the position and the team.',
+    ].join(NL));
+
+    check('a notes file with a position uses the same matching tiers',
+      rich.notes.length === 1 && rich.notes[0].name === 'Cam Ward',
+      JSON.stringify(rich.notes.map((n: { name: string }) => n.name)));
+
+    // A file with nowhere to read a note from is refused, because a silent
+    // success here means notes that never appear and no reason given.
+    const noColumn = await fetch(
+      API + '/api/notes?scoring=standard&teams=12&adpSource=sleeper',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ csv: 'Player,Rank' + NL + 'Jahmyr Gibbs,1' }),
+      },
+    );
+    check('a file with no notes column is refused', noColumn.status === 400,
+      String(noColumn.status));
+  }
+
   console.log('\nSleeper leagues');
   if (!fixtures) {
     console.log(NO_FIXTURES);

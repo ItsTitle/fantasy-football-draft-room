@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  fetchBoard, fetchDraftPicks, fetchLeagueSetup, fetchSleeperLeague, matchRankings,
+  fetchBoard, fetchDraftPicks, fetchLeagueSetup, fetchSleeperLeague, matchNotes, matchRankings,
 } from './api';
 import { maskLeague } from './anon';
 import { keeperPicksIn } from './engine/order';
@@ -13,7 +13,7 @@ import type { DraftEngine } from './engine/draft';
 import { rosterSize } from './engine/roster';
 import type {
   AppMode, Board, CpuConfig, DeclaredKeeper, LeagueConfig, LeagueImport, LeagueSetup,
-  Overrides, PendingKeeper, PresetPick, RankingSet, SavedLeague,
+  NoteSet, Overrides, PendingKeeper, PresetPick, RankingSet, SavedLeague,
 } from './engine/types';
 import type { RankingSource } from './storage';
 import { load, save } from './storage';
@@ -33,6 +33,9 @@ export default function App() {
 
   const [rankings, setRankings] = useState<RankingSet | null>(saved.rankings);
   const [rankingSource, setRankingSource] = useState<RankingSource | null>(saved.rankingSource);
+  const [noteSource, setNoteSource] = useState<RankingSource | null>(saved.noteSource);
+  const [noteSet, setNoteSet] = useState<NoteSet | null>(null);
+  const [notesBusy, setNotesBusy] = useState(false);
   const [overrides, setOverrides] = useState<Overrides>(saved.overrides);
   const [rankingsBusy, setRankingsBusy] = useState(false);
 
@@ -84,14 +87,15 @@ export default function App() {
   // match a different set of names. Run the file again rather than leave a
   // stale list of misses on screen.
   const lastMatched = useRef('');
+  const lastNoted = useRef('');
 
   useEffect(() => {
     save({
-      league, cpu, rankings, rankingSource, overrides, savedLeagues, activeLeagueId,
+      league, cpu, rankings, rankingSource, noteSource, overrides, savedLeagues, activeLeagueId,
       cpuPreset: preset, pace, mode, anonymous, myManager, resumeLive,
     });
-  }, [league, cpu, rankings, rankingSource, overrides, savedLeagues, activeLeagueId, preset, pace,
-    mode, anonymous, myManager, resumeLive]);
+  }, [league, cpu, rankings, rankingSource, noteSource, overrides, savedLeagues, activeLeagueId,
+    preset, pace, mode, anonymous, myManager, resumeLive]);
 
   const activeLeague = savedLeagues.find((l) => l.id === activeLeagueId) || null;
   const keepers = activeLeague?.keepers ?? [];
@@ -187,6 +191,59 @@ export default function App() {
     if (rankingSource) void runMatch(rankingSource, next);
   }, [overrides, rankingSource, runMatch]);
 
+  /**
+   * Run a notes file against the board with the current overrides applied.
+   *
+   * Mirrors `runMatch`, and for the same reason: a name mapping you saved has
+   * to reach your notes too, or a player you already taught the app about
+   * comes back unmatched here.
+   */
+  const runNotes = useCallback(async (source: RankingSource, withOverrides: Overrides) => {
+    setNotesBusy(true);
+    try {
+      const set = await matchNotes(
+        {
+          scoring: league.scoring,
+          teams: league.teams,
+          adpSource: league.adpSource,
+          year: league.year,
+        },
+        source.text,
+        source.label,
+        withOverrides,
+      );
+      setNoteSet(set);
+      setNoteSource(source);
+    } catch (err) {
+      setError('Your notes could not be matched. ' + String((err as Error).message));
+    } finally {
+      setNotesBusy(false);
+    }
+  }, [league.scoring, league.teams, league.adpSource, league.year]);
+
+  const loadNotes = useCallback((text: string, label: string) => {
+    void runNotes({ text, label, rankColumn: null }, overrides);
+  }, [runNotes, overrides]);
+
+  const clearNotes = useCallback(() => {
+    setNoteSource(null);
+    setNoteSet(null);
+  }, []);
+
+  /**
+   * Every note that applies to a player, from both places one can come from.
+   *
+   * The ranking file seeds them and the notes file wins. A ranking export is
+   * replaced whenever its publisher updates, and if it won it would silently
+   * undo a note you wrote yourself.
+   */
+  const notes = useMemo(() => {
+    const out = new Map<string, string>();
+    for (const e of rankings?.entries ?? []) if (e.note) out.set(e.id, e.note);
+    for (const n of noteSet?.notes ?? []) out.set(n.id, n.note);
+    return out.size ? out : null;
+  }, [rankings, noteSet]);
+
   const forgetOverride = useCallback((key: string) => {
     const next = { ...overrides };
     delete next[key];
@@ -201,6 +258,16 @@ export default function App() {
     lastMatched.current = stamp;
     void runMatch(rankingSource, overrides);
   }, [board, rankingSource, league.scoring, league.teams, league.adpSource, league.year]);
+
+  // The notes are matched against the same board, so they go stale for the
+  // same reasons and are re-run on the same signal.
+  useEffect(() => {
+    if (!noteSource || !board || notesBusy) return;
+    const stamp = [league.scoring, league.teams, league.adpSource, league.year].join('|');
+    if (lastNoted.current === stamp) return;
+    lastNoted.current = stamp;
+    void runNotes(noteSource, overrides);
+  }, [board, noteSource, league.scoring, league.teams, league.adpSource, league.year]);
 
   /** Apply a Sleeper league to the settings, keeping the draft slot you chose. */
   const applyImport = useCallback((imported: LeagueImport) => {
@@ -613,6 +680,10 @@ export default function App() {
           rankings={rankings}
           overrides={overrides}
           rankingsBusy={rankingsBusy}
+          noteSet={noteSet}
+          notesBusy={notesBusy}
+          onNotes={loadNotes}
+          onClearNotes={clearNotes}
           savedLeagues={savedLeagues}
           activeLeagueId={activeLeagueId}
           importedLeague={importedLeague}
@@ -707,6 +778,7 @@ export default function App() {
           anonymous={anonymous}
           draftId={importedLeague?.draftId ?? null}
           rankingEntries={rankings?.entries ?? null}
+          notes={notes}
           onEngine={setEngine}
           onFinish={() => setScreen('results')}
           onLeave={() => setScreen('setup')}

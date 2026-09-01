@@ -4,13 +4,14 @@ import { STARTER_SLOTS, rosterSize, starterCount } from '../engine/roster';
 import AssistantPanel from './AssistantPanel';
 import KeepersPanel from './KeepersPanel';
 import LeaguePanel from './LeaguePanel';
+import NotesPanel from './NotesPanel';
 import RankingsPanel from './RankingsPanel';
 import ResumePanel from './ResumePanel';
 import Section from './Section';
 import useNarrow from '../useNarrow';
 import { maskLeague } from '../anon';
 import type {
-  AppMode, Board, CpuConfig, LeagueConfig, LeagueImport, LeagueSetup,
+  AppMode, Board, CpuConfig, LeagueConfig, LeagueImport, LeagueSetup, NoteSet,
   Overrides, PendingKeeper, Position, PresetPick, RankingSet, RosterSlots, SavedLeague,
 } from '../engine/types';
 import { POSITIONS } from '../engine/types';
@@ -58,6 +59,10 @@ interface Props {
   rankings: RankingSet | null;
   overrides: Overrides;
   rankingsBusy: boolean;
+  noteSet: NoteSet | null;
+  notesBusy: boolean;
+  onNotes: (csv: string, label: string) => void;
+  onClearNotes: () => void;
   savedLeagues: SavedLeague[];
   activeLeagueId: string | null;
   importedLeague: LeagueImport | null;
@@ -127,6 +132,7 @@ function Stepper(props: {
 export default function SetupScreen(props: Props) {
   const {
     league, cpu, preset, pace, board, loading, error, rankings, overrides, rankingsBusy,
+    noteSet, notesBusy, onNotes, onClearNotes,
     savedLeagues, activeLeagueId, importedLeague, leagueBusy, leagueError,
     onLeague, onCpu, onPace, onRankings, onOverride, onForgetOverride, onRankColumn,
     onClearRankings, onLoadSleeperLeague, onAddSleeperLeague, onRefreshSleeperLeague,
@@ -186,6 +192,9 @@ export default function SetupScreen(props: Props) {
    * learn anything, which is the scrolling this was meant to end. Each of these
    * is the one reading you would have opened the section to check.
    */
+  /** How many notes arrived inside the ranking file rather than on their own. */
+  const notesFromRankings = rankings?.entries.filter((e) => e.note).length ?? 0;
+
   const states = {
     leagues: activeLeague
       ? maskLeague(activeLeague.name, savedLeagues.indexOf(activeLeague), anonymous)
@@ -196,6 +205,10 @@ export default function SetupScreen(props: Props) {
     keepers: (keepers.length ? keepers.length + ' entered' : 'none entered')
       + (pendingKeepers.length ? ' · ' + pendingKeepers.length + ' need a round' : ''),
     rankings: rankings ? rankings.entries.length + ' matched' : 'ADP order',
+    notes: (() => {
+      const total = notesFromRankings + (noteSet?.notes.length ?? 0);
+      return total ? total + ' on the board' : 'none';
+    })(),
   };
 
   return (
@@ -714,6 +727,21 @@ export default function SetupScreen(props: Props) {
             onForget={onForgetOverride}
             onRankColumn={onRankColumn}
             onClear={onClearRankings}
+          />
+        </Section>
+
+        <Section
+          title="Your notes"
+          summary={states.notes}
+          wide
+          collapsible={narrow}
+        >
+          <NotesPanel
+            notes={noteSet}
+            fromRankings={notesFromRankings}
+            busy={notesBusy || loading}
+            onLoad={onNotes}
+            onClear={onClearNotes}
           />
         </Section>
 

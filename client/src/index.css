@@ -575,6 +575,66 @@ input[type='range']::-moz-range-thumb {
 .injury { color: var(--qb); font-weight: 600; }
 
 /*
+ * YOUR NOTE
+ *
+ * Everything else on this row is measured: ADP, projected points, the odds he
+ * lasts. The note is the one thing you wrote, so it is the one italic in the
+ * app, and it sits a shade brighter than the bye week because your read
+ * outranks the metadata. The hairline is the position colour, which ties it to
+ * the player without spending a new one. It is not gold: gold means yours or
+ * on the clock, and it means nothing else anywhere.
+ */
+.player-note {
+  grid-column: 3 / -1;
+  width: 100%;
+  margin-top: 4px;
+  padding: 0 0 0 7px;
+  border: 0;
+  border-left: 2px solid var(--pos);
+  background: none;
+  color: var(--chalk-2);
+  font-family: var(--sans);
+  font-style: italic;
+  font-size: 11.5px;
+  line-height: 1.4;
+  text-align: left;
+}
+
+/* A note long enough to be cut gets a way to open it, and nothing else does. */
+.player-note.is-toggle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.player-note-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+}
+
+.player-note.is-open .player-note-text {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+}
+
+/* MORE reads as the row's own label because ADP and PROJ are set the same way. */
+.player-note-more {
+  font-family: var(--mono);
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--chalk-3);
+}
+
+.player-note.is-toggle:hover .player-note-more { color: var(--chalk); }
+
+/*
  * THE SURVIVAL BAR
  *
  * The one question a mock draft exists to answer is whether a player is still
@@ -1367,6 +1427,14 @@ input[type='range']::-moz-range-thumb {
   .pool-controls { padding: 8px 10px; gap: 6px; }
   .pool-controls .filter-row { gap: 4px; }
   .star { min-width: 44px; min-height: 44px; font-size: 17px; }
+
+  /*
+   * 32, not 44. A note is read rather than raced, and it is the only control
+   * that repeats once per player: 44 px each would cost a phone a player and a
+   * half of the pool per note on screen. The band grows, the type does not.
+   */
+  .player-note.is-toggle { min-height: 32px; padding-top: 6px; padding-bottom: 6px; }
+  .player-note { font-size: 12px; }
 
   /*
    * The settings screen is configured once, at leisure, and every row you

@@ -24,6 +24,8 @@ interface Props {
   anonymous: boolean;
   draftId: string | null;
   rankingEntries: import('../engine/types').RankingEntry[] | null;
+  /** What you wrote about a player, by player id. Null when you wrote none. */
+  notes: Map<string, string> | null;
   onEngine: (next: DraftEngine) => void;
   onFinish: () => void;
   onLeave: () => void;
@@ -39,7 +41,8 @@ function label(overall: number, teams: number): string {
 
 export default function DraftScreen(props: Props) {
   const {
-    engine, board, pace, mode, anonymous, draftId, rankingEntries, onEngine, onFinish, onLeave,
+    engine, board, pace, mode, anonymous, draftId, rankingEntries, notes,
+    onEngine, onFinish, onLeave,
   } = props;
 
   const [queue, setQueue] = useState<string[]>([]);
@@ -299,6 +302,7 @@ export default function DraftScreen(props: Props) {
           <PlayerPool
             players={available}
             myRank={myRank}
+            notes={notes}
             currentPick={pick}
             myNextPick={oddsTarget}
             teams={teams}

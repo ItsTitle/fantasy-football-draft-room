@@ -105,6 +105,62 @@ app.post('/api/rankings', async (req, res) => {
   }
 });
 
+/**
+ * Match a file of player notes against that same board.
+ *
+ * A notes file is a ranking file with the ranking left out: a column of names
+ * and a column of what you think about them. So it runs through the same six
+ * matching tiers and the same overrides, and the order of the rows is ignored.
+ *
+ * This exists next to the notes column in a ranking file, not instead of it.
+ * A ranking export is somebody else's file and you replace it whenever they
+ * publish again; your notes are yours and should outlive that.
+ */
+app.post('/api/notes', async (req, res) => {
+  const q = readQuery({ ...req.query, ...(req.is('application/json') ? req.body : {}) });
+  const text = typeof req.body === 'string' ? req.body : req.body?.csv;
+  const overrides = (req.is('application/json') && req.body?.overrides) || {};
+
+  if (!text || !String(text).trim()) {
+    res.status(400).json({ error: 'Send the notes as `csv` in the request body.' });
+    return;
+  }
+
+  try {
+    const board = await buildBoard(q);
+    const result = parseRankings(text, board.players, overrides, null);
+
+    if (!result.columns.note) {
+      res.status(400).json({
+        error: 'No notes column found. Name one column Notes and put the note in it.',
+        headers: result.columns.headers,
+      });
+      return;
+    }
+
+    // Only the rows that actually say something. A name with an empty note is
+    // not a note, and carrying it would blank a note the ranking file set.
+    const notes = result.entries
+      .filter((e) => e.note)
+      .map((e) => ({ id: e.id, name: e.name, note: e.note }));
+
+    res.json({
+      notes,
+      unmatched: result.unmatched,
+      ignored: result.ignored,
+      columns: result.columns,
+      matchRate: result.matchRate,
+      truncated: result.truncated,
+      poolSize: board.players.length,
+    });
+  } catch (err) {
+    res.status(502).json({
+      error: 'Could not build the board to match your notes against.',
+      detail: String(err.message || err),
+    });
+  }
+});
+
 /** Read a real Sleeper league and return draft settings that match it. */
 app.get('/api/sleeper/league/:id', async (req, res) => {
   const id = readId(req, res);

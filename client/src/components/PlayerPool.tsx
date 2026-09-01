@@ -13,6 +13,7 @@ export type SortKey = 'adp' | 'mine' | 'points' | 'odds';
 interface Props {
   players: Player[];
   myRank: Map<string, number> | null;
+  notes: Map<string, string> | null;
   currentPick: number;
   myNextPick: number | null;
   teams: number;
@@ -23,6 +24,36 @@ interface Props {
   formatLabel: string;
 }
 
+/**
+ * How long a note has to be before it is worth clamping.
+ *
+ * Short notes are the point of notes, and a control on "Handcuff, do not
+ * reach" is a control that does nothing. Only a note that would actually be
+ * cut gets a way to open it.
+ */
+const NOTE_CLAMP = 70;
+
+/** What you wrote about a player, on the row where you have to act on it. */
+function PlayerNote({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+
+  if (text.length <= NOTE_CLAMP) {
+    return <span className="player-note">{text}</span>;
+  }
+
+  return (
+    <button
+      type="button"
+      className={'player-note is-toggle' + (open ? ' is-open' : '')}
+      aria-expanded={open}
+      onClick={() => setOpen(!open)}
+    >
+      <span className="player-note-text">{text}</span>
+      <span className="player-note-more">{open ? 'LESS' : 'MORE'}</span>
+    </button>
+  );
+}
+
 function pickLabel(overall: number, teams: number): string {
   const round = Math.floor((overall - 1) / teams) + 1;
   const slot = ((overall - 1) % teams) + 1;
@@ -31,7 +62,7 @@ function pickLabel(overall: number, teams: number): string {
 
 export default function PlayerPool(props: Props) {
   const {
-    players, myRank, currentPick, myNextPick, teams, onDraft, canDraft, queue, onQueue,
+    players, myRank, notes, currentPick, myNextPick, teams, onDraft, canDraft, queue, onQueue,
   } = props;
 
   const [search, setSearch] = useState('');
@@ -154,6 +185,7 @@ export default function PlayerPool(props: Props) {
         {rows.map(({ player, odds, mine }) => {
           const queued = queue.includes(player.id);
           const pct = Math.round(odds * 100);
+          const note = notes?.get(player.id) ?? null;
           return (
             <div
               key={player.id}
@@ -202,6 +234,8 @@ export default function PlayerPool(props: Props) {
                 <b>{player.points != null ? Math.round(player.points) : '—'}</b>
                 <small>PROJ</small>
               </span>
+
+              {note && <PlayerNote text={note} />}
 
               {myNextPick && (
                 <span className="survival">
