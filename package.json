@@ -1,6 +1,6 @@
 {
   "name": "fantasy-football-draft-room",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "license": "MIT",
   "description": "A fantasy football draft tool: a tunable mock draft room, and an assistant that follows a real Sleeper draft",

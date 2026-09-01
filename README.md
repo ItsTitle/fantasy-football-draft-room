@@ -1,6 +1,7 @@
 # Draft Room
 
 Free, and MIT licensed. Built by [@AFantasyKing](https://x.com/AFantasyKing).
+What changed and when is in [CHANGELOG.md](CHANGELOG.md).
 
 A fantasy football draft tool with two modes. **Mock draft** simulates a room
 against you: live ADP for your scoring format, any roster shape, your own
